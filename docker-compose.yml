@@ -64,7 +64,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: ${ENVIRONMENT:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      SECRET_KEY: ${SECRET_KEY:-changeme}
+      # ⚠ DEV ONLY: weak fallback for quick local testing.
+      # For any deployment, set SECRET_KEY in your .env file.
+      SECRET_KEY: ${SECRET_KEY:-dev-only-insecure-key-32chars!!}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       OLLAMA_BASE_URL: http://ollama:11434
     volumes:
