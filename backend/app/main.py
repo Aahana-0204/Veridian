@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
+from app.core.database import close_db, init_db
 from app.core.logging import configure_logging
 from app.routers import health as health_router
 from app.schemas.common import ErrorResponse
@@ -17,6 +18,7 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
+    init_db(settings.database_url)
     logger.info(
         "startup",
         app=settings.app_name,
@@ -24,6 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         version="0.1.0",
     )
     yield
+    await close_db()
     logger.info("shutdown")
 
 

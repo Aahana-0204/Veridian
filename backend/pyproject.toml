@@ -9,7 +9,7 @@ line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM"]
-ignore = ["E501"]
+ignore = ["E501", "B008"]  # B008: FastAPI Depends() in default args is intentional
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

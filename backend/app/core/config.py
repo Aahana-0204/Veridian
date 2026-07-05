@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     # ── Database ─────────────────────────────────────────────────────────────
     database_url: str
+    # Separate test DB — never runs against the dev DB in tests
+    test_database_url: str = (
+        "postgresql+asyncpg://raguser:ragpassword@localhost:5432/ragdb_test"
+    )
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"

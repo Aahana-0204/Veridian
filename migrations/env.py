@@ -6,13 +6,21 @@ falling back to alembic.ini's sqlalchemy.url for offline mode.
 
 import asyncio
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
+
+# ── Make app package importable when running alembic from project root ───────
+sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+
+# Import Base + all models so metadata is populated for autogenerate
+from app.models import Base  # noqa: E402
 
 # ── Alembic Config ──────────────────────────────────────────────────────────
 config = context.config
@@ -26,8 +34,7 @@ _raw_url = os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url", ""
 _sync_url = _raw_url.replace("postgresql+asyncpg://", "postgresql://")
 config.set_main_option("sqlalchemy.url", _sync_url)
 
-# target_metadata will be set to Base.metadata in Part 2 when models exist.
-target_metadata = None
+target_metadata = Base.metadata
 
 
 # ── Offline mode (no live DB connection) ────────────────────────────────────
