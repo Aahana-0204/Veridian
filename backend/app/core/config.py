@@ -33,7 +33,10 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
 
     # -- CORS --
-    cors_origins: list[str] = ["http://localhost:5173"]
+    # Stored as a plain str so pydantic-settings never attempts json.loads() on it.
+    # Accepts a comma-separated list or a JSON array string.
+    # Parsed to list[str] via the cors_origins_list property used by main.py.
+    cors_origins: str = "http://localhost:5173"
 
     # -- Upload / Storage --
     max_upload_size_mb: int = 50
@@ -95,9 +98,10 @@ class Settings(BaseSettings):
 
     @field_validator("cors_origins", mode="before")
     @classmethod
-    def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
+    def parse_cors_origins(cls, v: str | list[str]) -> str:
+        """Normalize to a raw string — actual list parsing happens in cors_origins_list."""
+        if isinstance(v, list):
+            return ",".join(v)
         return v
 
     @field_validator("upload_dir", mode="after")

@@ -20,6 +20,21 @@ from app.schemas.common import ErrorResponse
 logger = structlog.get_logger(__name__)
 
 
+def _parse_cors_origins(raw: str) -> list[str]:
+    """Parse CORS origins from a comma-separated or JSON-array string."""
+    import json
+
+    raw = raw.strip()
+    if raw.startswith("["):
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                return [str(o).strip() for o in parsed if str(o).strip()]
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
@@ -52,7 +67,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=_parse_cors_origins(settings.cors_origins),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
