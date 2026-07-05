@@ -62,7 +62,62 @@ This file records significant design choices made throughout the project. Each e
 
 ---
 
-## Part 5: Embeddings & Vector Storage
+## Part 6: Retrieval & Generation Pipeline
+
+### ADR-015 — Hybrid retrieval with Reciprocal Rank Fusion (RRF)
+
+**Decision:** Combine vector (cosine similarity) and keyword (PostgreSQL FTS) retrievers using Reciprocal Rank Fusion.
+
+**Rationale:**
+- Vector search excels at semantic queries ("how does X work?") but misses exact matches ("error code 404").
+- PostgreSQL FTS (`ts_rank` / `to_tsvector`) provides BM25-style tf-idf scoring with zero additional infrastructure.
+- RRF merges the two ranked lists without score normalization — vector cosine scores (0–1) and ts_rank scores are on incompatible scales; RRF uses only rank positions.
+- RRF with k=60 consistently outperforms weighted score combination in BEIR benchmarks (Cormack et al. 2009).
+
+**Configuration:** `HYBRID_SEARCH_ENABLED=true` (default). When `false`, only the vector retriever is used.
+
+---
+
+### ADR-016 — Re-ranking with CrossEncoder (disabled by default)
+
+**Decision:** Offer an optional cross-encoder re-ranking stage (`RERANKER_ENABLED=false` by default).
+
+**Model:** `cross-encoder/ms-marco-MiniLM-L-6-v2` (~22M params, CPU-compatible).
+
+**Trade-off:** Cross-encoder re-ranking improves nDCG@10 by ~5–10 pp but adds 100–500 ms latency per query depending on candidate count and hardware. The `NoopReranker` pass-through ensures zero overhead when disabled.
+
+**When to enable:** High-precision use cases (legal, medical), or when retrieval quality is more important than p99 latency.
+
+---
+
+### ADR-017 — OpenAI gpt-4o-mini as default LLM
+
+**Decision:** Use `gpt-4o-mini` via LangChain `ChatOpenAI`.
+
+**Rationale:**
+- ~$0.15/1M input tokens — 4× cheaper than GPT-4o with comparable quality for RAG tasks.
+- 128k context window — accommodates large retrieved context.
+- Native streaming via LangChain `astream`.
+- LangChain abstraction means swapping to Anthropic/Mistral requires only a new `GenerationProvider` module.
+
+---
+
+### ADR-018 — Jinja2 versioned prompt templates
+
+**Decision:** Store prompt templates as `.j2` files in `app/prompts/templates/`, versioned by filename (e.g. `rag_v1.j2`).
+
+**Rationale:** Inline f-strings scatter prompt logic across the codebase and are hard to review/version. Jinja2 templates are diff-able, testable in isolation, and support conditionals (e.g. `{% if history %}`).
+
+**Token truncation strategy:** Most-relevant chunks first (already ranked), oldest history turns dropped first. tiktoken for exact token counts; char/4 fallback for non-OpenAI models.
+
+---
+
+### ADR-019 — [CHUNK_N] citation protocol
+
+**Decision:** Instruct the LLM to cite sources using `[CHUNK_N]` markers, then extract them via regex after generation.
+
+**Rationale:** Structured post-processing is more reliable than asking the LLM to output JSON citations (which can fail mid-stream). The regex approach works with streaming and adds zero prompt overhead for non-citing responses.
+
 
 ### ADR-011 — OpenAI text-embedding-3-small as default embedding model
 

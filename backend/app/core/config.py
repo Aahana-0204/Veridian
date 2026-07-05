@@ -43,7 +43,28 @@ class Settings(BaseSettings):
     chunk_size: int = 1000
     chunk_overlap: int = 200
 
-    # -- Embeddings --
+    # -- Retrieval --
+    top_k: int = 5
+    hybrid_search_enabled: bool = True
+    # candidate_multiplier: fetch top_k * N before RRF/reranking, then trim
+    retrieval_candidate_multiplier: int = 4
+
+    # -- Re-ranking --
+    reranker_enabled: bool = False
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_top_n_multiplier: int = 4
+
+    # -- Generation / LLM --
+    llm_provider: str = "openai"  # "openai" (only option currently)
+    llm_model: str = "gpt-4o-mini"
+    llm_temperature: float = 0.0
+    llm_max_tokens: int = 2048
+    llm_context_window: int = 128_000
+
+    # -- Prompt --
+    prompt_template: str = "rag_v1"
+    max_context_tokens: int = 4000
+    max_history_tokens: int = 1000
     embedding_provider: str = "openai"  # "openai" | "sentence-transformers"
     # OpenAI settings (used when embedding_provider="openai")
     openai_api_key: str = ""
