@@ -1,0 +1,54 @@
+name: Lint
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ── Python lint (ruff + black) ────────────────────────────────────────────
+  lint-backend:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install lint tools
+        run: pip install ruff==0.8.4 black==24.10.0
+
+      - name: Ruff — lint
+        run: ruff check .
+
+      - name: Black — format check
+        run: black --check .
+
+  # ── TypeScript lint (eslint + prettier) ──────────────────────────────────
+  lint-frontend:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier — format check
+        run: npm run format:check

@@ -1,0 +1,15 @@
+"""Alembic migrations for Veridian.
+
+Commands (run from project root):
+  # Auto-generate a migration from model changes
+  alembic revision --autogenerate -m "short description"
+
+  # Apply all pending migrations
+  alembic upgrade head
+
+  # Roll back one migration
+  alembic downgrade -1
+
+  # Show current revision
+  alembic current
+"""
