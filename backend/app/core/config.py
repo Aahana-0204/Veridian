@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     reranker_top_n_multiplier: int = 4
 
     # -- Generation / LLM --
-    llm_provider: str = "openai"  # "openai" (only option currently)
-    llm_model: str = "gpt-4o-mini"
+    llm_provider: str = "groq"  # "groq" (free tier) | "openai" (paid)
+    llm_model: str = "llama-3.1-8b-instant"
     llm_temperature: float = 0.0
     llm_max_tokens: int = 2048
     llm_context_window: int = 128_000
@@ -65,14 +65,18 @@ class Settings(BaseSettings):
     prompt_template: str = "rag_v1"
     max_context_tokens: int = 4000
     max_history_tokens: int = 1000
-    embedding_provider: str = "openai"  # "openai" | "sentence-transformers"
-    # OpenAI settings (used when embedding_provider="openai")
+    embedding_provider: str = "sentence-transformers"  # free default | "openai" for paid
+    # OpenAI settings (used when embedding_provider="openai" or llm_provider="openai")
     openai_api_key: str = ""
     openai_embedding_model: str = "text-embedding-3-small"
+    # Groq settings (used when llm_provider="groq") — free at console.groq.com
+    groq_api_key: str = ""
     # Dimension of the embedding vectors.  MUST match the pgvector column
-    # (Vector(1536) from Part 2) and the chosen model's output size.
-    # Change only when running a migration to resize the column.
-    embedding_dimensions: int = 1536
+    # and the chosen model's output size.
+    # sentence-transformers/all-MiniLM-L6-v2 → 384  (free, default)
+    # openai/text-embedding-3-small           → 1536 (paid)
+    # Change only when running the matching Alembic migration.
+    embedding_dimensions: int = 384
     # SentenceTransformers settings (used when embedding_provider="sentence-transformers")
     sentence_transformer_model: str = "all-MiniLM-L6-v2"
     # Rate / cost safety

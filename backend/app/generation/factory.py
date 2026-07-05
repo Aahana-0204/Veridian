@@ -13,7 +13,11 @@ if TYPE_CHECKING:
 def build_generation_provider(settings: Settings) -> GenerationProvider:
     """Instantiate the configured generation provider.
 
-    Currently supports: ``"openai"`` (default).
+    Supported providers
+    -------------------
+    - ``"openai"``  — OpenAI GPT models (paid).
+    - ``"groq"``    — Groq LPU inference (free tier, recommended for dev).
+
     Add new providers by extending this function and documenting the choice
     in DECISIONS.md.
     """
@@ -29,6 +33,17 @@ def build_generation_provider(settings: Settings) -> GenerationProvider:
             max_tokens=settings.llm_max_tokens,
         )
 
+    if name == "groq":
+        from app.generation.groq_provider import GroqGenerationProvider
+
+        return GroqGenerationProvider(
+            api_key=settings.groq_api_key,
+            model=settings.llm_model,
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
+        )
+
     raise ValueError(
-        f"Unknown LLM provider '{name}'. " "Set LLM_PROVIDER=openai in your .env."
+        f"Unknown LLM provider '{name}'. "
+        "Set LLM_PROVIDER=openai or LLM_PROVIDER=groq in your .env."
     )

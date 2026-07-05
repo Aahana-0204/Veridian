@@ -67,19 +67,6 @@ class SentenceTransformerProvider(EmbeddingProvider):
             )
         self._dimensions: int = dim
 
-
-# ── Factory registration ──────────────────────────────────────────────────────
-
-from app.embeddings.factory import EmbeddingProviderFactory  # noqa: E402
-
-
-@EmbeddingProviderFactory.register("sentence-transformers")
-def _create_st_provider(settings: object) -> SentenceTransformerProvider:  # type: ignore[type-arg]
-    from app.core.config import Settings
-
-    s: Settings = settings  # type: ignore[assignment]
-    return SentenceTransformerProvider(model_name=s.sentence_transformer_model)
-
     # ── EmbeddingProvider interface ───────────────────────────────────────────
 
     @property
@@ -117,3 +104,16 @@ def _create_st_provider(settings: object) -> SentenceTransformerProvider:  # typ
             raise EmbeddingError(
                 f"SentenceTransformer error ({type(exc).__name__}): {exc}"
             ) from exc
+
+
+# ── Factory registration ──────────────────────────────────────────────────────
+
+from app.embeddings.factory import EmbeddingProviderFactory  # noqa: E402
+
+
+@EmbeddingProviderFactory.register("sentence-transformers")
+def _create_st_provider(settings: object) -> SentenceTransformerProvider:  # type: ignore[type-arg]
+    from app.core.config import Settings
+
+    s: Settings = settings  # type: ignore[assignment]
+    return SentenceTransformerProvider(model_name=s.sentence_transformer_model)
