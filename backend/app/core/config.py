@@ -43,6 +43,25 @@ class Settings(BaseSettings):
     chunk_size: int = 1000
     chunk_overlap: int = 200
 
+    # -- Embeddings --
+    embedding_provider: str = "openai"  # "openai" | "sentence-transformers"
+    # OpenAI settings (used when embedding_provider="openai")
+    openai_api_key: str = ""
+    openai_embedding_model: str = "text-embedding-3-small"
+    # Dimension of the embedding vectors.  MUST match the pgvector column
+    # (Vector(1536) from Part 2) and the chosen model's output size.
+    # Change only when running a migration to resize the column.
+    embedding_dimensions: int = 1536
+    # SentenceTransformers settings (used when embedding_provider="sentence-transformers")
+    sentence_transformer_model: str = "all-MiniLM-L6-v2"
+    # Rate / cost safety
+    embedding_batch_size: int = 100  # max texts per provider API call override
+    embedding_max_concurrency: int = 3  # concurrent API calls
+    # Retry / back-off
+    embedding_max_retries: int = 3
+    embedding_retry_base_delay: float = 1.0  # seconds
+    embedding_retry_max_delay: float = 60.0  # seconds
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: str | list[str]) -> list[str]:

@@ -18,3 +18,4 @@ python-multipart==0.0.20
 langchain-text-splitters==0.3.9
 unstructured==0.17.2
 chardet==5.2.0
+openai>=2.0.0

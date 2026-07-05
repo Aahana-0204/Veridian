@@ -62,7 +62,71 @@ This file records significant design choices made throughout the project. Each e
 
 ---
 
-## Part 4: Document Ingestion Pipeline
+## Part 5: Embeddings & Vector Storage
+
+### ADR-011 — OpenAI text-embedding-3-small as default embedding model
+
+**Decision:** Use OpenAI `text-embedding-3-small` (1536 dimensions) as the default embedding provider.
+
+**Rationale:**
+- 1536 dimensions exactly matches the `chunks.embedding Vector(1536)` column created in Part 2 — no Alembic migration required.
+- ~5× cheaper than `text-embedding-ada-002` with better quality benchmarks.
+- Async API with native batch support (up to 2048 inputs per request).
+- Swappable to `text-embedding-3-large` (3072 dims) or a local model via `EMBEDDING_PROVIDER` env var.
+
+**Trade-off:** Requires an `OPENAI_API_KEY` in production. For fully offline deployments, set `EMBEDDING_PROVIDER=sentence-transformers` (see ADR-012).
+
+---
+
+### ADR-012 — SentenceTransformers as offline fallback
+
+**Decision:** Implement a `SentenceTransformerProvider` as an optional alternative to the OpenAI provider.
+
+**Usage:** Set `EMBEDDING_PROVIDER=sentence-transformers` and `EMBEDDING_DIMENSIONS=384` in `.env`, then run:
+
+```bash
+alembic revision --autogenerate -m "resize_embedding_dim_384"
+alembic upgrade head
+```
+
+**Default model:** `all-MiniLM-L6-v2` (384 dims). Override with `SENTENCE_TRANSFORMER_MODEL=<hf-model-id>`.
+
+**Trade-off:** Lower embedding quality than OpenAI for multi-domain documents; no API cost; requires GPU/CPU memory for inference.
+
+---
+
+### ADR-013 — SOLID-compliant embedding layer architecture
+
+**Decision:** Structure the embedding layer as five separate classes following SOLID principles.
+
+| Class | Responsibility (SRP) |
+|-------|----------------------|
+| `EmbeddingProvider` ABC | Defines the embedding contract |
+| `RetryPolicy` | Exponential back-off timing only |
+| `BatchEmbedder` | Splitting + concurrency only |
+| `EmbeddingProviderFactory` | Registry-based creation (OCP) |
+| `EmbeddingService` | Orchestrates chunk embedding + flush |
+
+**OCP detail:** New providers register via `@EmbeddingProviderFactory.register("name")` decorator in their own modules. The factory never changes.
+
+**DI detail:** `_run_pipeline` accepts an optional `EmbeddingService` parameter — tests inject a mock service; production code injects the real service built from settings.
+
+---
+
+### ADR-014 — Manual retry policy (no tenacity)
+
+**Decision:** Implement exponential back-off in `RetryPolicy` using `asyncio.sleep` directly rather than the `tenacity` library.
+
+**Rationale:**
+- Avoids an additional dependency for straightforward retry logic.
+- `RetryPolicy` is fully unit-testable with 0 ms delays by setting `base_delay=0.0`.
+- The class is small (~60 LOC) and self-documenting.
+
+**Retry behaviour:**
+- `TransientEmbeddingError` → retry with exponential back-off + ±25 % jitter
+- `EmbeddingError` → re-raise immediately (no retry)
+- Any other exception → wrapped in `EmbeddingError` and re-raised
+
 
 ### ADR-007 — StorageBackend ABC for file storage
 

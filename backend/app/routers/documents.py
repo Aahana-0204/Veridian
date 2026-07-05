@@ -22,12 +22,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.deps import get_current_active_user
+from app.models.chunk import Chunk
 from app.models.document import Document, DocumentStatus, FileType
 from app.models.user import User
 from app.schemas.document import (
     DocumentListResponse,
     DocumentResponse,
     DocumentStatusResponse,
+    EmbeddingVerificationResponse,
 )
 from app.services.ingestion import compute_content_hash, process_document
 from app.storage.base import StorageBackend
@@ -252,3 +254,65 @@ async def delete_document(
                 error=str(exc),
             )
     logger.info("document_deleted", document_id=str(document_id))
+
+
+# ── Embedding verification ────────────────────────────────────────────────────
+
+
+@router.get(
+    "/{document_id}/embeddings/verify",
+    response_model=EmbeddingVerificationResponse,
+    summary="Verify that all chunks for a document have embeddings",
+)
+async def verify_embeddings(
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> EmbeddingVerificationResponse:
+    """Return counts of chunks with and without non-null embedding vectors.
+
+    Useful for confirming that the embedding pipeline ran to completion.
+    A document is fully embedded when ``complete=true``.
+    """
+    # Ensure the document belongs to the current user
+    doc_result = await db.execute(
+        select(Document).where(
+            Document.id == document_id,
+            Document.user_id == current_user.id,
+        )
+    )
+    doc = doc_result.scalar_one_or_none()
+    if doc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found."
+        )
+
+    total_result = await db.execute(
+        select(func.count()).where(Chunk.document_id == document_id)
+    )
+    total: int = total_result.scalar_one()
+
+    with_embeddings_result = await db.execute(
+        select(func.count()).where(
+            Chunk.document_id == document_id,
+            Chunk.embedding.is_not(None),
+        )
+    )
+    with_embeddings: int = with_embeddings_result.scalar_one()
+
+    missing = total - with_embeddings
+    logger.info(
+        "embedding_verify",
+        document_id=str(document_id),
+        total=total,
+        with_embeddings=with_embeddings,
+        missing=missing,
+    )
+    return EmbeddingVerificationResponse(
+        document_id=document_id,
+        status=doc.status,
+        total_chunks=total,
+        chunks_with_embeddings=with_embeddings,
+        chunks_missing_embeddings=missing,
+        complete=(missing == 0 and total > 0),
+    )

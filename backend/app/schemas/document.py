@@ -59,3 +59,14 @@ class DocumentListResponse(BaseModel):
     page: int
     size: int
     pages: int
+
+
+class EmbeddingVerificationResponse(BaseModel):
+    """Result of GET /documents/{id}/embeddings/verify."""
+
+    document_id: uuid.UUID
+    status: DocumentStatus
+    total_chunks: int
+    chunks_with_embeddings: int
+    chunks_missing_embeddings: int
+    complete: bool  # True when total_chunks > 0 and chunks_missing_embeddings == 0
