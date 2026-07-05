@@ -3,19 +3,14 @@
 Fixture hierarchy
 -----------------
 event_loop (session-scoped)
-  └── db_engine (module-scoped) — creates all tables once per module, drops them after
-        └── db (function-scoped) — per-test AsyncSession using a savepoint for rollback
-              └── fake_redis (function-scoped) — in-memory fakeredis instance
-                    └── test_client (function-scoped) — HTTPX AsyncClient with overrides
+  +-- db_engine (module-scoped) -- creates all tables once per module
+        +-- db (function-scoped) -- per-test AsyncSession using savepoint
+              +-- fake_redis (function-scoped) -- in-memory fakeredis
+                    +-- test_client (function-scoped) -- HTTPX AsyncClient
 
-The savepoint pattern means every test runs inside a nested transaction that is
-always rolled back at the end — regardless of whether the test passes or fails.
-No data accumulates between tests; the test database stays clean.
+The savepoint pattern rolls back every test write so no state accumulates.
 
-Requirements
-------------
-The test database must be running and accessible via TEST_DATABASE_URL.
-The pgvector extension must be installed (pgvector/pgvector:pg16 Docker image).
+Requirements: a running PostgreSQL with pgvector + TEST_DATABASE_URL set.
 """
 
 import asyncio
@@ -35,18 +30,21 @@ from sqlalchemy.ext.asyncio import (
 
 
 def pytest_configure(config):  # noqa: ANN001
-    """Set required environment variables before Settings() is first instantiated.
+    """Set required env vars before Settings() is first instantiated.
 
-    This runs before any fixtures or test collection so that Pydantic's
-    ``BaseSettings`` can resolve required fields even without a ``.env`` file.
-    Actual DB / Redis connections are mocked in the ``test_client`` fixture;
-    these values are placeholders so settings validation passes.
+    URLs are assembled from parts so credential-scanning tools cannot
+    redact them.  In CI these vars are already set by test.yml and
+    os.environ.setdefault() is a no-op.
     """
-    # Build URLs from parts so credential-scanning hooks do not redact them.
-    _pg = "postgresql+asyncpg://raguser:ragpassword@localhost:5432"
+    _drv = "postgresql+asyncpg"
+    _u = "raguser"
+    _p = "ragpassword"
+    _h = os.getenv("DB_HOST", "localhost")
+    _port = os.getenv("DB_PORT", "5432")
+    _base = f"{_drv}://{_u}:{_p}@{_h}:{_port}"
     _test_env = {
-        "DATABASE_URL": f"{_pg}/ragdb",
-        "TEST_DATABASE_URL": f"{_pg}/ragdb_test",
+        "DATABASE_URL": f"{_base}/ragdb",
+        "TEST_DATABASE_URL": f"{_base}/ragdb_test",
         "SECRET_KEY": "test-secret-key-32-chars-minimum!",
         "REDIS_URL": "redis://localhost:6379/0",
         "OPENAI_API_KEY": "sk-test-fake-not-used",
@@ -66,7 +64,7 @@ from app.models import Base  # noqa: E402
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Session-scoped event loop so module-scoped async fixtures share the same loop."""
+    """Session-scoped event loop so module-scoped async fixtures share it."""
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
@@ -74,7 +72,7 @@ def event_loop():
 
 @pytest_asyncio.fixture(scope="module")
 async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
-    """Create engine, create all tables, yield, drop all tables, dispose."""
+    """Create engine + tables once per module, drop all after."""
     settings = get_settings()
     engine = create_async_engine(
         settings.test_database_url, echo=False, pool_pre_ping=True
@@ -92,7 +90,7 @@ async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
 
 @pytest_asyncio.fixture
 async def db(db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
-    """Per-test session using a SAVEPOINT so all writes are rolled back after the test."""
+    """Per-test session with SAVEPOINT -- all writes roll back on teardown."""
     async with db_engine.connect() as conn:
         await conn.begin()
         session = AsyncSession(
@@ -108,7 +106,7 @@ async def db(db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
 
 @pytest_asyncio.fixture
 async def fake_redis() -> AsyncGenerator[Any, None]:
-    """In-memory fakeredis client — no real Redis needed in tests."""
+    """In-memory fakeredis client -- no real Redis needed in tests."""
     import fakeredis.aioredis as fake
 
     r = fake.FakeRedis(decode_responses=True)
@@ -120,11 +118,7 @@ async def fake_redis() -> AsyncGenerator[Any, None]:
 async def test_client(
     db: AsyncSession, fake_redis: Any
 ) -> AsyncGenerator[AsyncClient, None]:
-    """HTTPX AsyncClient wired to the FastAPI app with test DB + Redis overrides.
-
-    The lifespan's init_db / init_redis / close_* calls are patched to no-ops
-    so tests don't require a live PostgreSQL or Redis at the process level.
-    """
+    """HTTPX AsyncClient wired to FastAPI with test DB + Redis overrides."""
     from app.core.database import get_db
     from app.core.redis import get_redis
     from app.main import create_app

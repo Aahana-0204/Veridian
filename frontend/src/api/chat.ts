@@ -117,7 +117,7 @@ export interface StreamQueryCallbacks {
  */
 export function streamQuery(
   request: ChatQueryRequest,
-  callbacks: StreamQueryCallbacks,
+  callbacks: StreamQueryCallbacks
 ): AbortController {
   const controller = new AbortController();
 
@@ -199,10 +199,7 @@ export function streamQuery(
 /**
  * GET /chat/sessions — paginated list of the current user's sessions.
  */
-export async function listSessions(
-  page = 1,
-  size = 20,
-): Promise<ChatSessionList> {
+export async function listSessions(page = 1, size = 20): Promise<ChatSessionList> {
   const { data } = await apiClient.get<ChatSessionList>('/chat/sessions', {
     params: { page, size },
   });
@@ -213,9 +210,7 @@ export async function listSessions(
  * GET /chat/sessions/{sessionId}/history — full message history.
  */
 export async function getSessionHistory(sessionId: string): Promise<ChatSession> {
-  const { data } = await apiClient.get<ChatSession>(
-    `/chat/sessions/${sessionId}/history`,
-  );
+  const { data } = await apiClient.get<ChatSession>(`/chat/sessions/${sessionId}/history`);
   return data;
 }
 

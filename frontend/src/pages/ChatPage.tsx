@@ -59,7 +59,12 @@ function CitationList({ citations }: CitationProps) {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </button>
 
@@ -205,9 +210,7 @@ function SessionSidebar({ activeSessionId, onSelect, onNew }: SessionSidebarProp
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 space-y-0.5 pb-4">
-        {isLoading && (
-          <p className="text-xs text-gray-600 text-center py-4">Loading sessions…</p>
-        )}
+        {isLoading && <p className="text-xs text-gray-600 text-center py-4">Loading sessions…</p>}
         {data?.items.length === 0 && !isLoading && (
           <p className="text-xs text-gray-600 text-center py-4" data-testid="no-sessions">
             No sessions yet
@@ -225,9 +228,7 @@ function SessionSidebar({ activeSessionId, onSelect, onNew }: SessionSidebarProp
               className="flex-1 text-left px-3 py-2 min-w-0"
               data-testid={`session-btn-${session.id}`}
             >
-              <p className="text-xs text-gray-300 truncate">
-                {session.title ?? 'Untitled Chat'}
-              </p>
+              <p className="text-xs text-gray-300 truncate">{session.title ?? 'Untitled Chat'}</p>
               <p className="text-[10px] text-gray-600 mt-0.5">
                 {new Date(session.created_at).toLocaleDateString()}
               </p>
@@ -255,11 +256,7 @@ function SessionSidebar({ activeSessionId, onSelect, onNew }: SessionSidebarProp
       </div>
 
       {/* Delete session modal */}
-      <Modal
-        open={!!deletingId}
-        onClose={() => setDeletingId(null)}
-        title="Delete chat session?"
-      >
+      <Modal open={!!deletingId} onClose={() => setDeletingId(null)} title="Delete chat session?">
         <p className="text-sm text-gray-400 mb-5">
           This will permanently remove the session and all its messages.
         </p>
@@ -464,12 +461,7 @@ export function ChatPage() {
         </div>
 
         {/* Input */}
-        <ChatInput
-          onSend={send}
-          onCancel={cancel}
-          disabled={isStreaming}
-          streaming={isStreaming}
-        />
+        <ChatInput onSend={send} onCancel={cancel} disabled={isStreaming} streaming={isStreaming} />
       </div>
     </div>
   );

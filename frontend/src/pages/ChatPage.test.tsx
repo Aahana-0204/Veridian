@@ -122,10 +122,9 @@ describe('CitationList', () => {
     await user.keyboard('{Enter}');
 
     // Wait for done
-    await waitFor(
-      () => expect(screen.getByTestId('citation-list')).toBeInTheDocument(),
-      { timeout: 3000 }
-    );
+    await waitFor(() => expect(screen.getByTestId('citation-list')).toBeInTheDocument(), {
+      timeout: 3000,
+    });
 
     // Citation is collapsed — snippet not visible
     expect(screen.queryByTestId('citation-snippet-0')).not.toBeInTheDocument();
@@ -150,21 +149,16 @@ describe('CitationList', () => {
     await user.type(input, 'Biology question');
     await user.keyboard('{Enter}');
 
-    await waitFor(
-      () => expect(screen.getByTestId('citation-list')).toBeInTheDocument(),
-      { timeout: 3000 }
-    );
+    await waitFor(() => expect(screen.getByTestId('citation-list')).toBeInTheDocument(), {
+      timeout: 3000,
+    });
 
     const toggle = screen.getByTestId('citation-toggle-0');
     fireEvent.click(toggle); // expand
-    await waitFor(() =>
-      expect(screen.getByTestId('citation-snippet-0')).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByTestId('citation-snippet-0')).toBeInTheDocument());
 
     fireEvent.click(toggle); // collapse
-    await waitFor(() =>
-      expect(screen.queryByTestId('citation-snippet-0')).not.toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.queryByTestId('citation-snippet-0')).not.toBeInTheDocument());
   });
 });
 
@@ -208,9 +202,7 @@ describe('SessionSidebar', () => {
   it('loads session history when clicking a session', async () => {
     renderChat();
 
-    await waitFor(() =>
-      expect(screen.getByTestId('session-btn-session-1')).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByTestId('session-btn-session-1')).toBeInTheDocument());
 
     fireEvent.click(screen.getByTestId('session-btn-session-1'));
 
@@ -224,9 +216,7 @@ describe('SessionSidebar', () => {
     vi.mocked(chatApi.deleteSession).mockResolvedValue(undefined);
     renderChat();
 
-    await waitFor(() =>
-      expect(screen.getByTestId('session-delete-session-1')).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByTestId('session-delete-session-1')).toBeInTheDocument());
 
     fireEvent.click(screen.getByTestId('session-delete-session-1'));
 

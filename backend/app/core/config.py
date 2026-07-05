@@ -55,7 +55,9 @@ class Settings(BaseSettings):
     reranker_top_n_multiplier: int = 4
 
     # -- Generation / LLM --
-    llm_provider: str = "ollama"  # "ollama" (free forever, local) | "groq" (free tier) | "openai" (paid)
+    llm_provider: str = (
+        "ollama"  # "ollama" (free forever, local) | "groq" (free tier) | "openai" (paid)
+    )
     llm_model: str = "llama3.2:3b"
     llm_temperature: float = 0.0
     llm_max_tokens: int = 2048
@@ -65,7 +67,9 @@ class Settings(BaseSettings):
     prompt_template: str = "rag_v1"
     max_context_tokens: int = 4000
     max_history_tokens: int = 1000
-    embedding_provider: str = "sentence-transformers"  # free default | "openai" for paid
+    embedding_provider: str = (
+        "sentence-transformers"  # free default | "openai" for paid
+    )
     # Ollama settings (used when llm_provider="ollama")
     ollama_base_url: str = "http://ollama:11434"  # Docker Compose service name
     # OpenAI settings (used when embedding_provider="openai" or llm_provider="openai")

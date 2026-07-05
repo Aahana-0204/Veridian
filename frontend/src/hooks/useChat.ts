@@ -94,9 +94,7 @@ export function useChat() {
         {
           onToken: (token) => {
             setMessages((prev) =>
-              prev.map((m) =>
-                m.id === asstMsgId ? { ...m, content: m.content + token } : m
-              )
+              prev.map((m) => (m.id === asstMsgId ? { ...m, content: m.content + token } : m))
             );
           },
           onDone: (event: ChatDoneEvent) => {
@@ -121,9 +119,7 @@ export function useChat() {
                 m.id === asstMsgId
                   ? {
                       ...m,
-                      content:
-                        m.content ||
-                        `Error: ${event.message}`,
+                      content: m.content || `Error: ${event.message}`,
                       streaming: false,
                       failed: true,
                     }

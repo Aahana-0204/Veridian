@@ -222,9 +222,7 @@ export function DocumentsPage() {
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="font-semibold text-xl text-gray-100">Documents</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Upload and manage your knowledge base files
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Upload and manage your knowledge base files</p>
         </div>
 
         <div className="mb-4">
@@ -281,15 +279,10 @@ export function DocumentsPage() {
             )}
           </h2>
 
-          {isLoading && (
-            <p className="text-sm text-gray-400 py-4 text-center">Loading…</p>
-          )}
+          {isLoading && <p className="text-sm text-gray-400 py-4 text-center">Loading…</p>}
 
           {!isLoading && filtered.length === 0 && (
-            <div
-              className="flex flex-col items-center py-10 text-center"
-              data-testid="empty-state"
-            >
+            <div className="flex flex-col items-center py-10 text-center" data-testid="empty-state">
               <svg
                 className="w-12 h-12 text-gray-700 mb-3"
                 fill="none"
@@ -321,11 +314,7 @@ export function DocumentsPage() {
         </div>
       </div>
 
-      <Modal
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        title="Delete document?"
-      >
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete document?">
         <p className="text-sm text-gray-400 mb-1">
           Are you sure you want to delete{' '}
           <span className="font-medium text-gray-200">{deleteTarget?.title}</span>?
