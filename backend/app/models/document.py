@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 
 
 class DocumentStatus(str, enum.Enum):
-    PENDING = "pending"
+    QUEUED = "queued"  # uploaded, waiting for background processing
+    PENDING = "pending"  # legacy alias for QUEUED (kept for backward compat)
     PROCESSING = "processing"
     READY = "ready"
     FAILED = "failed"
@@ -52,13 +53,17 @@ class Document(Base, TimestampMixin):
     status: Mapped[DocumentStatus] = mapped_column(
         SAEnum(DocumentStatus, name="documentstatus"),
         nullable=False,
-        default=DocumentStatus.PENDING,
+        default=DocumentStatus.QUEUED,
         index=True,
     )
     chunk_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # SHA-256 hex digest of the raw file — used to skip re-processing unchanged files
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Storage path returned by StorageBackend.save() — needed for file deletion
+    storage_path: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
-    # ── Relationships ────────────────────────────────────────────────────────
+    # -- Relationships --
     user: Mapped[User] = relationship("User", back_populates="documents")
     chunks: Mapped[list[Chunk]] = relationship(
         "Chunk",

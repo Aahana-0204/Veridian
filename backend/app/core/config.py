@@ -1,4 +1,5 @@
-from functools import lru_cache
+﻿from functools import lru_cache
+from pathlib import Path
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,30 +13,35 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── Application ──────────────────────────────────────────────────────────
+    # -- Application --
     app_name: str = "Veridian RAG API"
     environment: str = "development"
     debug: bool = False
     log_level: str = "INFO"
 
-    # ── Database ─────────────────────────────────────────────────────────────
+    # -- Database --
     database_url: str
-    # Separate test DB — never runs against the dev DB in tests
-    test_database_url: str = (
-        "postgresql+asyncpg://raguser:ragpassword@localhost:5432/ragdb_test"
-    )
+    test_database_url: str = "postgresql+asyncpg://localhost:5432/ragdb_test"
 
-    # ── Redis ─────────────────────────────────────────────────────────────────
+    # -- Redis --
     redis_url: str = "redis://localhost:6379/0"
 
-    # ── Security ──────────────────────────────────────────────────────────────
+    # -- Security --
     secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
-    # ── CORS ──────────────────────────────────────────────────────────────────
+    # -- CORS --
     cors_origins: list[str] = ["http://localhost:5173"]
+
+    # -- Upload / Storage --
+    max_upload_size_mb: int = 50
+    upload_dir: str = "/tmp/veridian_uploads"
+
+    # -- Chunking --
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -44,8 +50,14 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
+    @field_validator("upload_dir", mode="after")
+    @classmethod
+    def ensure_upload_dir(cls, v: str) -> str:
+        Path(v).mkdir(parents=True, exist_ok=True)
+        return v
+
 
 @lru_cache
 def get_settings() -> Settings:
-    """Cached settings singleton — import and call get_settings() everywhere."""
+    """Cached settings singleton -- import and call get_settings() everywhere."""
     return Settings()

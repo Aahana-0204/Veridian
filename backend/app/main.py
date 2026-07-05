@@ -11,6 +11,7 @@ from app.core.database import close_db, init_db
 from app.core.logging import configure_logging
 from app.core.redis import close_redis, init_redis
 from app.routers import auth as auth_router
+from app.routers import documents as documents_router
 from app.routers import health as health_router
 from app.routers import users as users_router
 from app.schemas.common import ErrorResponse
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router.router)
     app.include_router(auth_router.router)
     app.include_router(users_router.router)
+    app.include_router(documents_router.router)
 
     @app.exception_handler(Exception)
     async def global_exception_handler(

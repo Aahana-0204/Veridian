@@ -1,0 +1,60 @@
+Veridian Sample Document
+========================
+
+Section 1: Introduction
+------------------------
+This is a sample plain-text document used for testing the Veridian RAG
+ingestion pipeline. It contains enough text to produce multiple chunks when
+processed with the default chunk_size of 1000 characters.
+
+Veridian is a multi-tenant intelligent document workspace. Users upload their
+private documents and ask questions in natural language. The system retrieves
+the most relevant passages from the user's documents and generates grounded
+answers — preventing hallucinations by citing the source text.
+
+Section 2: How Ingestion Works
+-------------------------------
+When a file is uploaded the backend:
+1. Validates the file type and size.
+2. Computes a SHA-256 hash to detect duplicate uploads.
+3. Saves the raw file to the configured storage backend (local disk or S3).
+4. Creates a documents row with status=queued.
+5. Launches a background task that:
+   a. Parses the file text using the unstructured library.
+   b. Splits the text into overlapping chunks with LangChain's
+      RecursiveCharacterTextSplitter.
+   c. Stores each chunk as a row in the chunks table.
+   d. Updates the document status to ready.
+
+Section 3: Chunking Strategy
+------------------------------
+The RecursiveCharacterTextSplitter tries to split on paragraph boundaries first
+(\n\n), then on single newlines, then sentences, and finally on whitespace.
+This preserves semantic coherence within each chunk as much as possible.
+
+Chunk size and overlap are configurable via environment variables:
+  CHUNK_SIZE=1000
+  CHUNK_OVERLAP=200
+
+Overlap ensures that context bridging two chunks is not lost during retrieval.
+
+Section 4: Deduplication
+--------------------------
+If a user uploads the same file twice, the pipeline detects the matching
+SHA-256 hash and returns the existing document immediately without re-processing
+or storing a duplicate file. This saves storage and compute costs.
+
+Section 5: Error Handling
+--------------------------
+If the parsing or chunking step raises an exception, the background task
+catches it, updates the document status to failed, and stores the error message
+on the document row. The frontend polls the status endpoint until it reaches a
+terminal state (ready or failed) and then displays a human-readable message.
+
+Section 6: Future Work
+-----------------------
+- Replace FastAPI BackgroundTasks with Celery + Redis broker for horizontal
+  scaling and retry logic.
+- Add S3 storage backend for production deployments.
+- Implement multi-modal parsing for images and tables embedded in PDFs.
+- Compute per-chunk embeddings in Part 5 using OpenAI text-embedding-3-small.

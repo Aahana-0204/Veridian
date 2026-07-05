@@ -37,8 +37,18 @@ class DocumentResponse(DocumentBase):
     status: DocumentStatus
     chunk_count: int
     error_message: str | None = None
+    content_hash: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DocumentStatusResponse(BaseModel):
+    id: uuid.UUID
+    status: DocumentStatus
+    chunk_count: int
+    error_message: str | None = None
 
     model_config = {"from_attributes": True}
 

@@ -84,7 +84,10 @@ export function DashboardPage() {
         </div>
 
         {/* Quick links */}
-        <div className="text-center text-xs text-gray-600">
+        <div className="flex gap-4 justify-center text-xs text-gray-600">
+          <Link to="/documents" className="text-indigo-400 hover:text-indigo-300">
+            Documents →
+          </Link>
           <Link to="/" className="text-indigo-400 hover:text-indigo-300">
             System health →
           </Link>

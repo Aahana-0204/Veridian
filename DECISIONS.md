@@ -62,7 +62,52 @@ This file records significant design choices made throughout the project. Each e
 
 ---
 
-### ADR-006 — ESLint 9 flat config
+## Part 4: Document Ingestion Pipeline
+
+### ADR-007 — StorageBackend ABC for file storage
+
+**Decision:** Abstract file storage behind a `StorageBackend` interface (`save`, `load`, `delete`, `exists`) with `LocalStorageBackend` as the initial implementation.
+
+**Rationale:**
+- Calling code in routers and ingestion service is completely agnostic to the storage medium.
+- Swapping to S3 / Azure Blob only requires writing a new class and changing the `get_storage()` dependency — zero changes to routers or the ingestion pipeline.
+- `storage_path` is stored in the `documents` row so the path is opaque to callers (works for both local paths and S3 object keys).
+
+---
+
+### ADR-008 — FastAPI BackgroundTasks for ingestion (not Celery/RQ)
+
+**Decision:** Use FastAPI's built-in `BackgroundTasks` to run the ingestion pipeline immediately after the upload response is returned.
+
+**Rationale:**
+- Zero additional infrastructure — no queue broker, no worker processes.
+- Sufficient for single-node, low-throughput ingestion (< ~10 concurrent uploads).
+
+**When to reconsider:** If ingestion volume grows, the pipeline should be moved to Celery (with Redis as broker) or RQ. Concrete triggers: p99 ingestion time > 30 s, worker memory exceeding container limits, or a need for retries/dead-letter queues. The `_run_pipeline()` function is already extracted from any FastAPI context so it requires zero changes to migrate.
+
+---
+
+### ADR-009 — SHA-256 content hash for deduplication
+
+**Decision:** Compute a SHA-256 hex digest of the raw file bytes and store it in `documents.content_hash`. On upload, check `(user_id, content_hash)` uniqueness before storing.
+
+**Rationale:**
+- Prevents the same file from being ingested and embedded twice (idempotent uploads).
+- Hash is computed before writing to storage — no wasted disk I/O on duplicates.
+- Per-user scope: two users can upload the same file and each gets their own document row.
+
+---
+
+### ADR-010 — unstructured for document parsing
+
+**Decision:** Use the `unstructured` library for text extraction from PDF, DOCX, TXT, MD, and HTML.
+
+**Rationale:**
+- Single API (`partition(filename=...)`) handles all supported formats with automatic format detection.
+- Emits structured `Element` objects with page numbers, making metadata extraction straightforward.
+
+**Trade-off:** `unstructured` is a heavy dependency (100 MB+ with optional extras). Full PDF support requires system packages (`poppler-utils`, `libmagic`). The Docker image build installs these; local Windows dev only has TXT/MD/HTML support without additional setup.
+
 
 **Decision:** Use ESLint 9 with the new flat config (`eslint.config.js`) rather than the legacy `.eslintrc.cjs`.
 
