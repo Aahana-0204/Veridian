@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.chat import MessageRole
+from app.schemas.rag import Citation
 
 
 class ChatMessageCreate(BaseModel):
@@ -51,3 +52,39 @@ class ChatSessionListResponse(BaseModel):
     page: int
     size: int
     pages: int
+
+
+# ── Chat query request / SSE event schemas ────────────────────────────────────
+
+
+class ChatQueryRequest(BaseModel):
+    """POST /chat/query request body."""
+
+    message: str = Field(min_length=1, max_length=10_000)
+    session_id: uuid.UUID | None = None
+
+
+class ChatTokenEvent(BaseModel):
+    """SSE event: a single streaming token from the LLM."""
+
+    type: Literal["token"] = "token"
+    content: str
+
+
+class ChatDoneEvent(BaseModel):
+    """SSE event: generation complete — sent as the last event."""
+
+    type: Literal["done"] = "done"
+    session_id: uuid.UUID
+    message_id: uuid.UUID
+    citations: list[Citation]
+    model: str
+    prompt_tokens: int
+    completion_tokens: int
+
+
+class ChatErrorEvent(BaseModel):
+    """SSE event: terminal error during streaming."""
+
+    type: Literal["error"] = "error"
+    message: str

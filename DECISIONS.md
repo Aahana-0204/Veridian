@@ -234,3 +234,64 @@ alembic upgrade head
 - ESLint 9 is the current major release; the legacy format is deprecated.
 - `eslint-plugin-react-hooks@5` requires ESLint 9.
 - Flat config is more explicit and composable with no implicit rule cascading.
+
+---
+
+## ADR-020: SSE over WebSocket for streaming chat responses
+
+**Decision:** Use Server-Sent Events (SSE) for streaming chat responses.
+
+**Rationale:**
+- Generation is inherently unidirectional (server streams tokens to client).
+- SSE uses plain HTTP; no upgrade handshake required — works transparently
+  through any standard HTTP proxy or load balancer.
+- FastAPI's StreamingResponse handles SSE natively with 	ext/event-stream.
+- WebSocket is overkill when the client never needs to send data mid-stream.
+
+**Trade-off:** If multi-turn "interrupt" semantics are ever needed (client
+sends a cancellation signal while streaming), SSE requires a separate DELETE
+request to cancel. A WebSocket would be simpler then.
+
+---
+
+## ADR-021: Partial-save strategy for interrupted streams
+
+**Decision:** When an SSE stream is interrupted mid-response (network error,
+provider timeout, etc.), save the partial response with a [STREAM_INTERRUPTED]
+suffix rather than discarding it.
+
+**Rationale:**
+- Users see what was actually generated — better UX than a silent blank entry.
+- The session history remains coherent for future turns.
+- The assistant message is always closed (no "stuck in generating" state).
+- Clear visual marker distinguishes complete from interrupted responses.
+
+**Alternative considered:** Discard partial responses entirely (write nothing to
+DB on failure). Simpler invariant but worse UX and harder to debug.
+
+---
+
+## ADR-022: Streaming session opens its own DB session
+
+**Decision:** The SSE event generator opens a fresh AsyncSession via
+get_streaming_session() (a context-manager in database.py) rather than
+using the FastAPI request-scoped get_db dependency.
+
+**Rationale:** FastAPI's StreamingResponse body is consumed *after* the
+route handler returns. If the handler yields the request-scoped session via
+get_db, that session is closed (and rolled back) before the generator runs.
+get_streaming_session() is explicitly designed for this pattern.
+
+---
+
+## ADR-023: rom __future__ import annotations + FastAPI 0.115.5 incompatibility
+
+**Issue:** FastAPI 0.115.5 introduced a strict check: endpoints with
+status_code=204 must have esponse_model=None. When rom __future__ import
+annotations is active, Python stores -> None as the string 'None'. FastAPI
+evaluates this string via ForwardRef, which returns NoneType (the class) —
+truthy — causing the assertion to fire.
+
+**Fix:** Add esponse_model=None explicitly to all endpoints with
+status_code=HTTP_204_NO_CONTENT. This explicitly signals "no response model"
+regardless of the return annotation.

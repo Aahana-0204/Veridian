@@ -218,6 +218,7 @@ async def get_document_status(
 @router.delete(
     "/{document_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
     summary="Delete a document and its chunks",
 )
 async def delete_document(

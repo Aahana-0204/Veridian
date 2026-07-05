@@ -9,6 +9,7 @@ Lifecycle
 """
 
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 import structlog
 from sqlalchemy import text
@@ -86,3 +87,25 @@ async def check_db_connection() -> bool:
     except Exception as exc:
         logger.warning("db_health_check_failed", error=str(exc))
         return False
+
+
+@asynccontextmanager
+async def get_streaming_session() -> AsyncGenerator[AsyncSession, None]:
+    """Async context manager for sessions used inside SSE generators.
+
+    Unlike ``get_db`` (which is a FastAPI request-scoped dependency),
+    this context manager can be used inside async generators that outlive
+    the HTTP request handler — specifically the SSE event stream.
+
+    Patchable in tests: ``patch("app.core.database.get_streaming_session", ...)``.
+    """
+    if _session_factory is None:
+        raise RuntimeError("Database not initialised. Call init_db() first.")
+
+    async with _session_factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

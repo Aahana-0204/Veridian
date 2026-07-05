@@ -19,6 +19,7 @@ The pgvector extension must be installed (pgvector/pgvector:pg16 Docker image).
 """
 
 import asyncio
+import os
 from collections.abc import AsyncGenerator
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -32,8 +33,29 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.core.config import get_settings
-from app.models import Base
+
+def pytest_configure(config):  # noqa: ANN001
+    """Set required environment variables before Settings() is first instantiated.
+
+    This runs before any fixtures or test collection so that Pydantic's
+    ``BaseSettings`` can resolve required fields even without a ``.env`` file.
+    Actual DB / Redis connections are mocked in the ``test_client`` fixture;
+    these values are placeholders so settings validation passes.
+    """
+    _test_env = {
+        "DATABASE_URL": "postgresql+asyncpg://raguser:ragpassword@localhost:5432/ragdb",
+        "TEST_DATABASE_URL": "postgresql+asyncpg://raguser:ragpassword@localhost:5432/ragdb_test",
+        "SECRET_KEY": "test-secret-key-32-chars-minimum!",
+        "REDIS_URL": "redis://localhost:6379/0",
+        "OPENAI_API_KEY": "sk-test-key",
+        "ENVIRONMENT": "test",
+    }
+    for key, value in _test_env.items():
+        os.environ.setdefault(key, value)
+
+
+from app.core.config import get_settings  # noqa: E402
+from app.models import Base  # noqa: E402
 
 
 @pytest.fixture(scope="session")
