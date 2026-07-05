@@ -15,19 +15,20 @@ def build_generation_provider(settings: Settings) -> GenerationProvider:
 
     Supported providers
     -------------------
-    - ``"openai"``  — OpenAI GPT models (paid).
-    - ``"groq"``    — Groq LPU inference (free tier, recommended for dev).
+    - ``"ollama"``  — Local Ollama inference: free forever, no API key (default).
+    - ``"groq"``    — Groq cloud LPU: free tier (30 req/min, 6k/day).
+    - ``"openai"``  — OpenAI GPT models: paid.
 
     Add new providers by extending this function and documenting the choice
     in DECISIONS.md.
     """
     name = settings.llm_provider
 
-    if name == "openai":
-        from app.generation.openai_provider import OpenAIGenerationProvider
+    if name == "ollama":
+        from app.generation.ollama_provider import OllamaGenerationProvider
 
-        return OpenAIGenerationProvider(
-            api_key=settings.openai_api_key,
+        return OllamaGenerationProvider(
+            base_url=settings.ollama_base_url,
             model=settings.llm_model,
             temperature=settings.llm_temperature,
             max_tokens=settings.llm_max_tokens,
@@ -43,7 +44,17 @@ def build_generation_provider(settings: Settings) -> GenerationProvider:
             max_tokens=settings.llm_max_tokens,
         )
 
+    if name == "openai":
+        from app.generation.openai_provider import OpenAIGenerationProvider
+
+        return OpenAIGenerationProvider(
+            api_key=settings.openai_api_key,
+            model=settings.llm_model,
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
+        )
+
     raise ValueError(
         f"Unknown LLM provider '{name}'. "
-        "Set LLM_PROVIDER=openai or LLM_PROVIDER=groq in your .env."
+        "Set LLM_PROVIDER=ollama, LLM_PROVIDER=groq, or LLM_PROVIDER=openai in your .env."
     )

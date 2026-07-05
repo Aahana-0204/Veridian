@@ -1,0 +1,9 @@
+# Heavy ML dependencies — only needed when EMBEDDING_PROVIDER=sentence-transformers
+# or RERANKER_ENABLED=true.
+#
+# NOT installed in CI (avoids 2GB+ torch download).
+# Installed in production Docker builds via:
+#   pip install -r requirements.txt -r requirements-ml.txt
+#
+# In CI, the embedding provider is mocked so sentence-transformers is not needed.
+sentence-transformers>=3.0.0

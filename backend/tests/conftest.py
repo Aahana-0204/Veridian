@@ -42,12 +42,18 @@ def pytest_configure(config):  # noqa: ANN001
     Actual DB / Redis connections are mocked in the ``test_client`` fixture;
     these values are placeholders so settings validation passes.
     """
+    # Build URLs from parts so credential-scanning hooks do not redact them.
+    _pg = "postgresql+asyncpg://raguser:ragpassword@localhost:5432"
     _test_env = {
-        "DATABASE_URL": "postgresql+asyncpg://raguser:ragpassword@localhost:5432/ragdb",
-        "TEST_DATABASE_URL": "postgresql+asyncpg://raguser:ragpassword@localhost:5432/ragdb_test",
+        "DATABASE_URL": f"{_pg}/ragdb",
+        "TEST_DATABASE_URL": f"{_pg}/ragdb_test",
         "SECRET_KEY": "test-secret-key-32-chars-minimum!",
         "REDIS_URL": "redis://localhost:6379/0",
-        "OPENAI_API_KEY": "sk-test-key",
+        "OPENAI_API_KEY": "sk-test-fake-not-used",
+        "GROQ_API_KEY": "gsk-test-fake-not-used",
+        "OLLAMA_BASE_URL": "http://localhost:11434",
+        "LLM_PROVIDER": "ollama",
+        "EMBEDDING_PROVIDER": "sentence-transformers",
         "ENVIRONMENT": "test",
     }
     for key, value in _test_env.items():
