@@ -195,3 +195,77 @@ async def test_logout_idempotent(test_client: AsyncClient) -> None:
     r2 = await test_client.post("/auth/logout", json={"refresh_token": refresh_tok})
     assert r1.status_code == 204
     assert r2.status_code == 204
+
+
+# ── Full E2E flow ─────────────────────────────────────────────────────────────
+
+
+async def test_full_auth_flow(test_client: AsyncClient) -> None:
+    """register → login → access protected route → refresh → logout → old token rejected."""
+
+    # 1. Register
+    reg = await test_client.post(
+        "/auth/register",
+        json={"email": "flow@example.com", "password": "flowpassword"},
+    )
+    assert reg.status_code == 201
+
+    # 2. Login (confirms credentials work independently of register tokens)
+    login_resp = await test_client.post(
+        "/auth/login",
+        json={"email": "flow@example.com", "password": "flowpassword"},
+    )
+    assert login_resp.status_code == 200
+    access_tok = login_resp.json()["access_token"]
+    refresh_tok = login_resp.json()["refresh_token"]
+
+    # 3. Access protected route
+    me = await test_client.get(
+        "/users/me", headers={"Authorization": f"Bearer {access_tok}"}
+    )
+    assert me.status_code == 200
+    assert me.json()["email"] == "flow@example.com"
+
+    # 4. Refresh — get a new access token
+    refresh_resp = await test_client.post(
+        "/auth/refresh", json={"refresh_token": refresh_tok}
+    )
+    assert refresh_resp.status_code == 200
+    new_access = refresh_resp.json()["access_token"]
+    assert new_access != access_tok  # genuinely a new token
+
+    # 5. New access token works on protected route
+    me2 = await test_client.get(
+        "/users/me", headers={"Authorization": f"Bearer {new_access}"}
+    )
+    assert me2.status_code == 200
+
+    # 6. Logout
+    lo = await test_client.post("/auth/logout", json={"refresh_token": refresh_tok})
+    assert lo.status_code == 204
+
+    # 7. Old refresh token must now be rejected
+    stale = await test_client.post("/auth/refresh", json={"refresh_token": refresh_tok})
+    assert stale.status_code == 401
+
+
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+
+
+async def test_login_rate_limit(test_client: AsyncClient) -> None:
+    """Exceeding 5 login attempts / minute from same IP returns 429."""
+    # Register once so we have a valid target email
+    await test_client.post(
+        "/auth/register",
+        json={"email": "ratelimit@example.com", "password": "securepass1"},
+    )
+
+    # Fire 6 login attempts — 6th must hit the rate limit
+    for _ in range(6):
+        resp = await test_client.post(
+            "/auth/login",
+            json={"email": "ratelimit@example.com", "password": "wrongpass"},
+        )
+
+    # The last response must be 429
+    assert resp.status_code == 429
