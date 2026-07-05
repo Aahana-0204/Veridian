@@ -9,7 +9,10 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.database import close_db, init_db
 from app.core.logging import configure_logging
+from app.core.redis import close_redis, init_redis
+from app.routers import auth as auth_router
 from app.routers import health as health_router
+from app.routers import users as users_router
 from app.schemas.common import ErrorResponse
 
 logger = structlog.get_logger(__name__)
@@ -19,6 +22,7 @@ logger = structlog.get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     init_db(settings.database_url)
+    await init_redis(settings.redis_url)
     logger.info(
         "startup",
         app=settings.app_name,
@@ -27,6 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     yield
     await close_db()
+    await close_redis()
     logger.info("shutdown")
 
 
@@ -52,6 +57,8 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router.router)
+    app.include_router(auth_router.router)
+    app.include_router(users_router.router)
 
     @app.exception_handler(Exception)
     async def global_exception_handler(
