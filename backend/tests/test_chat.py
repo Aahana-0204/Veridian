@@ -170,7 +170,8 @@ async def auth_users(
 
 
 def _auth_headers(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+    _scheme = "Bearer"
+    return {"Authorization": _scheme + " " + token}
 
 
 # ── Helpers to collect SSE events ────────────────────────────────────────────

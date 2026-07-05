@@ -1,0 +1,54 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Veridian Backend — Production Dockerfile
+# Multi-stage build: builder installs deps; final image is minimal + non-root
+# ────────────────────────────────────────────────────────────────────────────
+
+# ── Stage 1: dependency builder ──────────────────────────────────────────────
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+# Install system packages needed by unstructured (PDF/DOCX parsing)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt requirements-ml.txt ./
+
+# Install all deps into a dedicated prefix so we can copy them cleanly
+RUN pip install --no-cache-dir --prefix=/install \
+    -r requirements.txt \
+    -r requirements-ml.txt
+
+# ── Stage 2: production runtime ───────────────────────────────────────────────
+FROM python:3.12-slim AS production
+
+# Re-install only the runtime system libraries (no build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed Python packages from builder
+COPY --from=builder /install /usr/local
+
+# Create non-root user
+RUN groupadd --gid 1001 veridian \
+    && useradd --uid 1001 --gid veridian --shell /bin/bash --create-home veridian
+
+WORKDIR /app
+
+# Copy application source
+COPY --chown=veridian:veridian . .
+
+# Upload directory must be writable by the app user
+RUN mkdir -p /tmp/veridian_uploads && chown veridian:veridian /tmp/veridian_uploads
+
+USER veridian
+
+EXPOSE 8000
+
+# Production: no --reload, workers=1 (scale via replicas not threads for async)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--workers", "1", "--loop", "uvloop", "--http", "httptools"]

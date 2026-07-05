@@ -43,9 +43,10 @@ class Chunk(Base):
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
-    # 1536-dim OpenAI text-embedding-3-small vector; Mapped[Any] avoids
-    # SQLAlchemy's type-checker fighting with pgvector's custom descriptor.
-    embedding: Mapped[Any] = mapped_column(Vector(1536), nullable=True)
+    # 384-dim sentence-transformers/all-MiniLM-L6-v2 vector (default, free, local).
+    # Change EMBEDDING_DIMENSIONS and run the matching Alembic migration to switch
+    # to a different model (e.g., OpenAI text-embedding-3-small → 1536 dims).
+    embedding: Mapped[Any] = mapped_column(Vector(384), nullable=True)
 
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)

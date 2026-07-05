@@ -42,3 +42,5 @@ coverage/
 
 # Docker volumes (local overrides)
 postgres_data/
+
+backend/.ci_test_venv/

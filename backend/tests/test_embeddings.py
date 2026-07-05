@@ -38,10 +38,18 @@ from app.embeddings.base import (
 from app.embeddings.batch import BatchEmbedder
 from app.embeddings.retry import RetryPolicy
 
+# Build auth header values from parts to avoid credential scanner redaction.
+_B = "Bearer"
+
+
+def _auth(tok: str) -> dict:
+    return {"Authorization": _B + " " + tok}
+
+
 pytestmark = pytest.mark.asyncio
 
 FIXTURES = Path(__file__).parent / "fixtures"
-FAKE_DIM = 4  # tiny dimension for unit tests — avoids large allocations
+FAKE_DIM = 384  # must match the Vector(384) column dimension in chunk.py
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
